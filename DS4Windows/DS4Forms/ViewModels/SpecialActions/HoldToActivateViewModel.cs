@@ -68,6 +68,7 @@ namespace DS4WinWPF.DS4Forms.ViewModels.SpecialActions
         private double holdSeconds = HoldToActivateSettings.DEFAULT_HOLD_SECONDS;
         private int outputIndex;
         private int modeIndex;
+        private int repeatIndex;
         private int buttonIndex = -1;
         private int profileIndex = -1;
         private int keyValue;
@@ -115,6 +116,7 @@ namespace DS4WinWPF.DS4Forms.ViewModels.SpecialActions
                 MacroPanelVisibilityChanged?.Invoke(this, EventArgs.Empty);
                 ProfilePanelVisibilityChanged?.Invoke(this, EventArgs.Empty);
                 ModePanelVisibilityChanged?.Invoke(this, EventArgs.Empty);
+                RepeatPanelVisibilityChanged?.Invoke(this, EventArgs.Empty);
                 RaiseSummary();
             }
         }
@@ -133,6 +135,25 @@ namespace DS4WinWPF.DS4Forms.ViewModels.SpecialActions
         public Visibility ModePanelVisibility =>
             Kind == HoldOutputKind.Key || Kind == HoldOutputKind.Button ? Visibility.Visible : Visibility.Collapsed;
         public event EventHandler ModePanelVisibilityChanged;
+
+        public Visibility RepeatPanelVisibility => Kind == HoldOutputKind.Macro ? Visibility.Visible : Visibility.Collapsed;
+        public event EventHandler RepeatPanelVisibilityChanged;
+
+        /// <summary>Macro output only: 0 = play once, 1 = repeat while held, 2 = toggle repeat on/off.</summary>
+        public int RepeatIndex
+        {
+            get => repeatIndex;
+            set
+            {
+                if (repeatIndex == value || value < 0 || value > 2) return;
+                repeatIndex = value;
+                RepeatIndexChanged?.Invoke(this, EventArgs.Empty);
+                RaiseSummary();
+            }
+        }
+        public event EventHandler RepeatIndexChanged;
+
+        public HoldMacroRepeat Repeat => (HoldMacroRepeat)repeatIndex;
 
         /// <summary>0 = keep pressed while held, 1 = toggle on/off.</summary>
         public int ModeIndex
@@ -231,7 +252,12 @@ namespace DS4WinWPF.DS4Forms.ViewModels.SpecialActions
                     HoldOutputKind.Key => keyValue > 0 ? $"presses {KeyText}" : "presses the key you pick",
                     HoldOutputKind.Button => buttonIndex >= 0 && buttonIndex < ButtonChoices.Count
                         ? $"presses {ButtonChoices[buttonIndex].Label}" : "presses the controller button you pick",
-                    HoldOutputKind.Macro => "plays your macro once",
+                    HoldOutputKind.Macro => Repeat switch
+                    {
+                        HoldMacroRepeat.WhileHeld => "plays your macro, then plays it again and again for as long as you keep holding (it finishes the current run when you let go)",
+                        HoldMacroRepeat.Toggle => "starts playing your macro over and over, even after you let go; the next long hold stops it (quick taps still work normally)",
+                        _ => "plays your macro once",
+                    },
                     _ => SelectedProfileName() is string name ? $"switches to profile \"{name}\"" : "switches to the profile you pick",
                 };
                 if (Kind is HoldOutputKind.Key or HoldOutputKind.Button)
@@ -261,6 +287,7 @@ namespace DS4WinWPF.DS4Forms.ViewModels.SpecialActions
             holdSeconds = settings.HoldSeconds;
             outputIndex = (int)settings.Kind;
             modeIndex = settings.Mode == HoldOutputMode.Toggle ? 1 : 0;
+            repeatIndex = (int)settings.Repeat;
             keyValue = settings.KeyCode;
             keyType = settings.ScanCode ? DS4KeyType.ScanCode : DS4KeyType.None;
             buttonIndex = -1;
@@ -293,6 +320,7 @@ namespace DS4WinWPF.DS4Forms.ViewModels.SpecialActions
                 HoldSeconds = holdSeconds,
                 Kind = Kind,
                 Mode = modeIndex == 1 ? HoldOutputMode.Toggle : HoldOutputMode.WhileHeld,
+                Repeat = Repeat,
                 KeyCode = keyValue,
                 ScanCode = keyType.HasFlag(DS4KeyType.ScanCode),
                 Button = buttonIndex >= 0 && buttonIndex < ButtonChoices.Count

@@ -233,7 +233,7 @@
                                           AutomationProperties.Name="Hold action">
                                     <ComboBoxItem Content="Press a keyboard key" />
                                     <ComboBoxItem Content="Press a controller button" />
-                                    <ComboBoxItem Content="Play a macro once" />
+                                    <ComboBoxItem Content="Play a macro" />
                                     <ComboBoxItem Content="Switch to another profile (second layout)" />
                                 </ComboBox>
                                 <Button x:Name="holdKeySelectBtn" Content="{Binding KeyText,FallbackValue=Select a key}"
@@ -245,6 +245,14 @@
                                 <Button x:Name="holdMacroBtn" Content="{Binding MacroText,FallbackValue=Record a macro}"
                                         Visibility="{Binding MacroPanelVisibility}" Margin="{StaticResource spaceMargin}"
                                         Click="HoldMacroBtn_Click" />
+                                <StackPanel x:Name="holdRepeatPanel" Visibility="{Binding RepeatPanelVisibility}" Margin="{StaticResource spaceMargin}">
+                                    <Label Content="Macro repeat:" />
+                                    <ComboBox x:Name="holdRepeatCombo" SelectedIndex="{Binding RepeatIndex}" AutomationProperties.Name="Macro repeat">
+                                        <ComboBoxItem Content="Play once" />
+                                        <ComboBoxItem Content="Repeat while held" />
+                                        <ComboBoxItem Content="Toggle repeat on/off" />
+                                    </ComboBox>
+                                </StackPanel>
                                 <ComboBox x:Name="holdProfileCombo" ItemsSource="{Binding ProfileList.ProfileListCol}" DisplayMemberPath="Name"
                                           SelectedIndex="{Binding ProfileIndex}" Visibility="{Binding ProfilePanelVisibility}"
                                           Margin="{StaticResource spaceMargin}" AutomationProperties.Name="Profile to switch to" />

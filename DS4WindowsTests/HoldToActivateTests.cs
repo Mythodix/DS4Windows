@@ -199,6 +199,233 @@ public sealed class HoldToActivateTests
         Assert.AreEqual(HoldToActivateSettings.Parse("hold=3;out=Button;button=A").Serialize(), vm.BuildSettings().Serialize());
     }
 
+    [TestMethod]
+    public void MacroRepeatParsesAndSerializesBackwardCompatibly()
+    {
+        // The user's real saved action from before this option existed.
+        var old = HoldToActivateSettings.Parse("hold=3;out=Macro;macro=273/380/273/274;rumble=1;tap=Delayed");
+        Assert.AreEqual(HoldMacroRepeat.Once, old.Repeat, "old configs load as Play once");
+        Assert.IsFalse(old.Serialize().Contains("repeat="), "Once is not written, so older builds read it unchanged");
+
+        foreach (HoldMacroRepeat mode in new[] { HoldMacroRepeat.WhileHeld, HoldMacroRepeat.Toggle })
+        {
+            var s = new HoldToActivateSettings { Kind = HoldOutputKind.Macro, Repeat = mode };
+            s.Macro.AddRange(new[] { 273, 380, 273 });
+            string text = s.Serialize();
+            StringAssert.Contains(text, "repeat=" + mode);
+            var back = HoldToActivateSettings.Parse(text);
+            Assert.AreEqual(mode, back.Repeat);
+            CollectionAssert.AreEqual(new[] { 273, 380, 273 }, back.Macro);
+            Assert.AreEqual(text, back.Serialize());
+        }
+
+        Assert.AreEqual(HoldMacroRepeat.Toggle, HoldToActivateSettings.Parse("out=Macro;macro=81/81;repeat=toggle").Repeat);
+        Assert.AreEqual(HoldMacroRepeat.Once, HoldToActivateSettings.Parse("out=Macro;macro=81/81;repeat=Forever").Repeat);
+        Assert.AreEqual(HoldMacroRepeat.Once, HoldToActivateSettings.Parse("out=Macro;macro=81/81;repeat=7").Repeat);
+        var key = new HoldToActivateSettings { Kind = HoldOutputKind.Key, KeyCode = 81, Repeat = HoldMacroRepeat.Toggle };
+        Assert.IsFalse(key.Serialize().Contains("repeat="), "repeat only applies to macro output");
+    }
+
+    [TestMethod]
+    public void InstantMacrosGetPlaybackGapsButTimedMacrosAreUntouched()
+    {
+        // R1 down, R1 up, Cross down, Cross up with no waits at all.
+        int[] instant = { 273, 273, 261, 261 };
+        CollectionAssert.AreEqual(new[] { 273, 360, 273, 360, 261, 360, 261 },
+            HoldToActivateSettings.BuildPlaybackMacro(instant));
+        CollectionAssert.AreEqual(new[] { 273, 273, 261, 261 }, instant, "saved data is not modified");
+
+        int[] timed = { 273, 380, 273, 400, 261, 380, 261 };
+        CollectionAssert.AreEqual(timed, HoldToActivateSettings.BuildPlaybackMacro(timed));
+
+        // Lightbar/rumble codes are not waits and get no gap of their own.
+        int[] withLight = { 1000255000, 65, 65 };
+        CollectionAssert.AreEqual(new[] { 1000255000, 65, 360, 65 }, HoldToActivateSettings.BuildPlaybackMacro(withLight));
+        CollectionAssert.AreEqual(new[] { 65 }, HoldToActivateSettings.BuildPlaybackMacro(new List<int> { 65 }));
+        Assert.AreEqual(0, HoldToActivateSettings.BuildPlaybackMacro(new List<int>()).Length);
+    }
+
+    private static List<HoldMacroCommand> Drive(HoldMacroRepeat repeat, HoldToActivateTracker t, HoldMacroRepeatState st,
+        bool pressed, long from, long to, List<HoldToActivateFrame> frames = null)
+    {
+        var commands = new List<HoldMacroCommand>();
+        for (long now = from; now < to; now += 4)
+        {
+            var f = t.Update(pressed, now, Hold, instantTap: false);
+            frames?.Add(f);
+            var c = st.Update(repeat, f);
+            if (c != HoldMacroCommand.None) commands.Add(c);
+        }
+        return commands;
+    }
+
+    [TestMethod]
+    public void PlayOnceFiresOncePerCompletedHold()
+    {
+        var t = new HoldToActivateTracker();
+        var st = new HoldMacroRepeatState();
+        CollectionAssert.AreEqual(new[] { HoldMacroCommand.PlayOnce }, Drive(HoldMacroRepeat.Once, t, st, true, 0, 6000));
+        Assert.AreEqual(0, Drive(HoldMacroRepeat.Once, t, st, false, 6000, 6500).Count, "release does nothing");
+        Assert.AreEqual(0, Drive(HoldMacroRepeat.Once, t, st, true, 6500, 6700).Count, "short press does not fire");
+        Assert.IsFalse(st.Looping);
+    }
+
+    [TestMethod]
+    public void RepeatWhileHeldLoopsUntilReleaseThenFinishesThePass()
+    {
+        var t = new HoldToActivateTracker();
+        var st = new HoldMacroRepeatState();
+        Assert.AreEqual(0, Drive(HoldMacroRepeat.WhileHeld, t, st, true, 0, 2000).Count, "nothing before the hold time");
+        CollectionAssert.AreEqual(new[] { HoldMacroCommand.StartLoop }, Drive(HoldMacroRepeat.WhileHeld, t, st, true, 2000, 9000));
+        Assert.IsTrue(st.Looping);
+        CollectionAssert.AreEqual(new[] { HoldMacroCommand.StopAfterPass }, Drive(HoldMacroRepeat.WhileHeld, t, st, false, 9000, 9500));
+        Assert.IsFalse(st.Looping);
+
+        // A quick tap afterwards is a normal tap and never starts the loop.
+        var frames = new List<HoldToActivateFrame>();
+        Assert.AreEqual(0, Drive(HoldMacroRepeat.WhileHeld, t, st, true, 9500, 9700, frames).Count);
+        Assert.AreEqual(0, Drive(HoldMacroRepeat.WhileHeld, t, st, false, 9700, 9900, frames).Count);
+        Assert.IsTrue(frames.Any(f => f.SourcePressed), "tap still reaches the normal mapping");
+    }
+
+    [TestMethod]
+    public void ToggleRepeatStartsOnHoldKeepsGoingAfterReleaseAndStopsOnNextHold()
+    {
+        var t = new HoldToActivateTracker();
+        var st = new HoldMacroRepeatState();
+        CollectionAssert.AreEqual(new[] { HoldMacroCommand.StartLoop }, Drive(HoldMacroRepeat.Toggle, t, st, true, 0, 4000));
+        Assert.AreEqual(0, Drive(HoldMacroRepeat.Toggle, t, st, false, 4000, 8000).Count, "keeps looping after release");
+        Assert.IsTrue(st.Looping);
+
+        var frames = new List<HoldToActivateFrame>();
+        Assert.AreEqual(0, Drive(HoldMacroRepeat.Toggle, t, st, true, 8000, 8200, frames).Count, "quick tap does not stop it");
+        Assert.AreEqual(0, Drive(HoldMacroRepeat.Toggle, t, st, false, 8200, 8600, frames).Count);
+        Assert.IsTrue(frames.Any(f => f.SourcePressed), "quick tap while looping still does the normal tap");
+        Assert.IsTrue(st.Looping);
+
+        var stop = Drive(HoldMacroRepeat.Toggle, t, st, true, 9000, 13000, frames);
+        CollectionAssert.AreEqual(new[] { HoldMacroCommand.StopNow }, stop, "next completed hold stops it");
+        Assert.IsFalse(st.Looping);
+        Assert.AreEqual(0, Drive(HoldMacroRepeat.Toggle, t, st, false, 13000, 13500).Count);
+        CollectionAssert.AreEqual(new[] { HoldMacroCommand.StartLoop }, Drive(HoldMacroRepeat.Toggle, t, st, true, 14000, 18000), "and can start again");
+    }
+
+    private sealed class FakePass
+    {
+        private int active;
+        public int MaxConcurrent;
+        public int Passes;
+        public int Released;
+        public readonly List<long> Starts = new List<long>();
+        public readonly List<long> Ends = new List<long>();
+        public readonly System.Diagnostics.Stopwatch Clock = System.Diagnostics.Stopwatch.StartNew();
+        public int PassMs = 40;
+
+        public void Play(CancellationToken token)
+        {
+            int now = Interlocked.Increment(ref active);
+            lock (this)
+            {
+                MaxConcurrent = Math.Max(MaxConcurrent, now);
+                Starts.Add(Clock.ElapsedMilliseconds);
+            }
+            try
+            {
+                token.WaitHandle.WaitOne(PassMs);
+            }
+            finally
+            {
+                lock (this)
+                {
+                    Passes++;
+                    Released++;
+                    Ends.Add(Clock.ElapsedMilliseconds);
+                }
+                Interlocked.Decrement(ref active);
+            }
+        }
+    }
+
+    [TestMethod]
+    public void RunnerPlaysOnceAndIgnoresStartsWhileBusy()
+    {
+        var pass = new FakePass { PassMs = 150 };
+        var runner = new HoldMacroRunner(pass.Play);
+        runner.Apply(HoldMacroCommand.PlayOnce);
+        runner.Apply(HoldMacroCommand.PlayOnce);
+        runner.Apply(HoldMacroCommand.PlayOnce);
+        Assert.IsTrue(runner.CurrentTask.Wait(5000));
+        Thread.Sleep(100);
+        Assert.AreEqual(1, pass.Passes);
+        Assert.AreEqual(1, pass.MaxConcurrent);
+        Assert.IsFalse(runner.IsBusy);
+    }
+
+    [TestMethod]
+    public void RunnerLoopsWithGapNeverOverlapsAndStopsAfterPass()
+    {
+        var pass = new FakePass { PassMs = 30 };
+        var runner = new HoldMacroRunner(pass.Play);
+        runner.Apply(HoldMacroCommand.StartLoop);
+        Thread.Sleep(600);
+        runner.Apply(HoldMacroCommand.StartLoop); // re-hold while looping: still one loop
+        Thread.Sleep(200);
+        runner.Apply(HoldMacroCommand.StopAfterPass);
+        Assert.IsTrue(runner.CurrentTask.Wait(5000));
+        int passes = pass.Passes;
+        Assert.IsTrue(passes >= 4, $"looped {passes} passes");
+        Assert.AreEqual(1, pass.MaxConcurrent, "never two passes at once");
+        Assert.AreEqual(pass.Passes, pass.Released, "every pass released its outputs");
+        lock (pass)
+        {
+            for (int i = 1; i < pass.Starts.Count; i++)
+                Assert.IsTrue(pass.Starts[i] - pass.Ends[i - 1] >= HoldMacroRepeatState.MIN_PASS_GAP_MS - 5,
+                    $"gap {pass.Starts[i] - pass.Ends[i - 1]} ms");
+        }
+        Thread.Sleep(200);
+        Assert.AreEqual(passes, pass.Passes, "no more passes after stopping");
+    }
+
+    [TestMethod]
+    public void RunnerStopNowCutsThePassAndRestartQueuesBehindIt()
+    {
+        var pass = new FakePass { PassMs = 2000 };
+        var runner = new HoldMacroRunner(pass.Play);
+        runner.Apply(HoldMacroCommand.StartLoop);
+        Thread.Sleep(100);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        Assert.IsTrue(runner.StopAndWait(1000), "stop cuts the long pass");
+        Assert.IsTrue(sw.ElapsedMilliseconds < 1000);
+        Assert.AreEqual(1, pass.Passes);
+        Assert.AreEqual(1, pass.Released);
+
+        pass.PassMs = 20;
+        runner.Apply(HoldMacroCommand.StartLoop);
+        runner.Apply(HoldMacroCommand.StopNow);
+        runner.Apply(HoldMacroCommand.StartLoop);
+        Thread.Sleep(300);
+        runner.Apply(HoldMacroCommand.StopNow);
+        Assert.IsTrue(runner.CurrentTask.Wait(5000));
+        Assert.AreEqual(1, pass.MaxConcurrent, "restart after stop never overlaps the old pass");
+        Assert.AreEqual(pass.Passes, pass.Released);
+    }
+
+    [TestMethod]
+    public void EditorShowsRepeatChoiceOnlyForMacroAndSavesIt()
+    {
+        var vm = new HoldToActivateViewModel(new ProfileList());
+        vm.LoadSettings(HoldToActivateSettings.Parse("hold=3;out=Macro;macro=273/380/273;rumble=1;tap=Delayed"));
+        Assert.AreEqual(0, vm.RepeatIndex, "old macro holds show Play once");
+        Assert.AreEqual(Visibility.Visible, vm.RepeatPanelVisibility);
+        vm.RepeatIndex = 2;
+        Assert.AreEqual(HoldMacroRepeat.Toggle, HoldToActivateSettings.Parse(vm.BuildSettings().Serialize()).Repeat);
+        vm.RepeatIndex = 1;
+        StringAssert.Contains(vm.BuildSettings().Serialize(), "repeat=WhileHeld");
+        StringAssert.Contains(vm.Summary, "keep holding");
+        vm.OutputIndex = 0;
+        Assert.AreEqual(Visibility.Collapsed, vm.RepeatPanelVisibility);
+    }
+
     // Renders the real Special Action editor with the new options, the same
     // way the existing editor render tests do. Saved as PNGs for review.
     [DataTestMethod]
@@ -207,6 +434,7 @@ public sealed class HoldToActivateTests
     [DataRow("button-toggle", "hold=3;out=Button;button=Y;mode=Toggle;rumble=1;tap=Delayed", "DarkTheme")]
     [DataRow("profile-switch", "hold=2;out=Profile;profile=Diablo%204%20layout%202;rumble=1;tap=Delayed", "DarkTheme")]
     [DataRow("macro-instant", "hold=1.5;out=Macro;macro=81/81;rumble=0;tap=Instant", "DefaultTheme")]
+    [DataRow("repeat", "hold=3;out=Macro;macro=273/380/273/400/261/380/261;repeat=WhileHeld;rumble=1;tap=Delayed", "DarkTheme")]
     public void RenderHoldToActivateEditor(string name, string details, string theme)
     {
         string dir = Environment.GetEnvironmentVariable("HOLD_TO_ACTIVATE_SCREENSHOT_DIR");
@@ -237,6 +465,9 @@ public sealed class HoldToActivateTests
             var combo = (ComboBox)editor.FindName("actionTypeCombo");
             Assert.AreEqual(10, combo.SelectedIndex);
             Assert.AreEqual(Visibility.Visible, ((FrameworkElement)editor.FindName("holdRumbleCheck")).Visibility);
+            var repeatPanel = (FrameworkElement)editor.FindName("holdRepeatPanel");
+            Assert.AreEqual(details.Contains("out=Macro") ? Visibility.Visible : Visibility.Collapsed, repeatPanel.Visibility,
+                "macro repeat choice shows only for macro output");
 
             var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
             bitmap.Render(editor);

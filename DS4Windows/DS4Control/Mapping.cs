@@ -1967,6 +1967,9 @@ namespace DS4Windows
 
         internal static void CommitNeutral(int device)
         {
+            // Stop looping Hold to Activate macros and release what they hold
+            // before the slot's output is neutralized.
+            StopAllHoldMacros(device);
             ClearAutomaticProfileSwitchIntent(device);
             syncStateLock.EnterWriteLock();
             try
