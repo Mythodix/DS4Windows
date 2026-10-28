@@ -1,0 +1,43 @@
+name: Build DS4Windows exe
+
+# Simple build for RG 7's fork: compiles DS4Windows x64 on a GitHub Windows
+# runner and uploads a ready-to-run zip you can download from the Actions tab.
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore .\DS4Windows\DS4WinWPF.csproj -r win-x64
+
+      - name: Build x64
+        run: dotnet publish .\DS4Windows\DS4WinWPF.csproj -c Release /p:platform=x64 -r win-x64 --self-contained true -o .\out\DS4Windows
+
+      - name: Check exe exists
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem .\out\DS4Windows -Filter DS4Windows.exe -Recurse | Select-Object -First 1
+          if (-not $exe) { throw "DS4Windows.exe was not produced." }
+          Write-Host "Built $($exe.FullName) ($([math]::Round($exe.Length/1KB)) KB)"
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: DS4Windows-x64
+          path: out/DS4Windows
+          retention-days: 30
