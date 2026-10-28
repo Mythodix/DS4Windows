@@ -33,6 +33,7 @@ jobs:
         run: |
           $exe = Get-ChildItem .\out\DS4Windows -Filter DS4Windows.exe -Recurse | Select-Object -First 1
           if (-not $exe) { throw "DS4Windows.exe was not produced." }
+          if (-not (Test-Path .\out\DS4Windows\.ds4windows-managed-files.txt)) { throw "Managed-files manifest missing; VIIPER setup would fail." }
           Write-Host "Built $($exe.FullName) ($([math]::Round($exe.Length/1KB)) KB)"
 
       - name: Upload build
@@ -40,6 +41,7 @@ jobs:
         with:
           name: DS4Windows-x64
           path: out/DS4Windows
+          include-hidden-files: true
           retention-days: 30
 
       # Runs after the upload so a test problem never blocks the download.
