@@ -45,6 +45,7 @@ namespace DS4WinWPF.DS4Forms
         private MultiActButtonViewModel multiActButtonVM;
         private SpecialActionViewModel saSteeringWheelVM;
         private SpecialActionViewModel calibrateGyroVM;
+        private HoldToActivateViewModel holdToActivateVM;
 
         public event EventHandler Cancel;
         public delegate void SaveHandler(object sender, string actionName);
@@ -68,6 +69,7 @@ namespace DS4WinWPF.DS4Forms
             multiActButtonVM = new MultiActButtonViewModel();
             saSteeringWheelVM = new SpecialActionViewModel(8);
             calibrateGyroVM = new SpecialActionViewModel(9);
+            holdToActivateVM = new HoldToActivateViewModel(profileList);
 
             // Hide tab headers. Tab content will still be visible
             blankActTab.Visibility = Visibility.Collapsed;
@@ -80,6 +82,7 @@ namespace DS4WinWPF.DS4Forms
             multiActTab.Visibility = Visibility.Collapsed;
             sixaxisWheelCalibrateTab.Visibility = Visibility.Collapsed;
             gyroCalibrateTab.Visibility = Visibility.Collapsed;
+            holdToActivateTab.Visibility = Visibility.Collapsed;
 
             if (specialAction != null)
             {
@@ -100,6 +103,7 @@ namespace DS4WinWPF.DS4Forms
             multiActTab.DataContext = multiActButtonVM;
             sixaxisWheelCalibrateTab.DataContext = saSteeringWheelVM;
             gyroCalibrateTab.DataContext = calibrateGyroVM;
+            holdToActivateTab.DataContext = holdToActivateVM;
 
             SetupLateEvents();
         }
@@ -217,6 +221,7 @@ namespace DS4WinWPF.DS4Forms
             multiActTab.DataContext = null;
             sixaxisWheelCalibrateTab.DataContext = null;
             gyroCalibrateTab.DataContext = null;
+            holdToActivateTab.DataContext = null;
         }
 
         private void LoadAction(DS4Windows.SpecialAction specialAction)
@@ -256,6 +261,9 @@ namespace DS4WinWPF.DS4Forms
                 case DS4Windows.SpecialAction.ActionTypeId.GyroCalibrate:
                     calibrateGyroVM.LoadAction(specialAction);
                     break;
+                case DS4Windows.SpecialAction.ActionTypeId.HoldToActivate:
+                    holdToActivateVM.LoadAction(specialAction);
+                    break;
             }
         }
 
@@ -290,6 +298,12 @@ namespace DS4WinWPF.DS4Forms
             {
                 specialActVM.SetAction(tempAct);
                 valid = CheckActionValid(tempAct, typeId);
+                if (!valid && typeId == DS4Windows.SpecialAction.ActionTypeId.HoldToActivate)
+                {
+                    // Leave the editor open so the user can fix the setting.
+                    MessageBox.Show(holdToActivateVM.ValidationMessage, "Hold to Activate");
+                    return;
+                }
             }
             else if (specialActVM.ExistingName)
             {
@@ -335,6 +349,9 @@ namespace DS4WinWPF.DS4Forms
                     case DS4Windows.SpecialAction.ActionTypeId.GyroCalibrate:
                         calibrateGyroVM.SaveAction(tempAct, editMode);
                         break;
+                    case DS4Windows.SpecialAction.ActionTypeId.HoldToActivate:
+                        holdToActivateVM.SaveAction(tempAct, editMode);
+                        break;
                 }
 
                 Saved?.Invoke(this, tempAct.name);
@@ -373,6 +390,9 @@ namespace DS4WinWPF.DS4Forms
                     break;
                 case DS4Windows.SpecialAction.ActionTypeId.GyroCalibrate:
                     valid = calibrateGyroVM.IsValid(action);
+                    break;
+                case DS4Windows.SpecialAction.ActionTypeId.HoldToActivate:
+                    valid = holdToActivateVM.IsValid(action);
                     break;
             }
 
@@ -545,6 +565,30 @@ namespace DS4WinWPF.DS4Forms
             {
                 launchProgVM.Filepath = dialog.FileName;
             }
+        }
+
+        internal HoldToActivateViewModel HoldToActivateViewModel => holdToActivateVM;
+
+        private void HoldKeySelectBtn_Click(object sender, RoutedEventArgs e)
+        {
+            DS4Windows.DS4ControlSettings settings = holdToActivateVM.PrepareKeySettings();
+            BindingWindow window = new BindingWindow(specialActVM.DeviceNum, settings,
+                BindingWindow.ExposeMode.Keyboard);
+            window.Owner = App.Current.MainWindow;
+            window.ShowDialog();
+            holdToActivateVM.ReadKeySettings(settings);
+        }
+
+        private void HoldMacroBtn_Click(object sender, RoutedEventArgs e)
+        {
+            DS4Windows.DS4ControlSettings settings = holdToActivateVM.PrepareMacroSettings();
+            RecordBoxWindow recordWin = new RecordBoxWindow(specialActVM.DeviceNum, settings, false);
+            recordWin.Saved += (sender2, args) =>
+            {
+                holdToActivateVM.ReadMacroSettings(settings);
+            };
+
+            recordWin.ShowDialog();
         }
 
         private void PressKeySelectBtn_Click(object sender, RoutedEventArgs e)

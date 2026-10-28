@@ -35,7 +35,7 @@ using ThreadState = System.Threading.ThreadState;
 
 namespace DS4Windows
 {
-    public class Mapping
+    public partial class Mapping
     {
         /*
          * Represent the synthetic keyboard and mouse events.  Maintain counts for each so we don't duplicate events.
@@ -2931,6 +2931,8 @@ namespace DS4Windows
             // only field maps change, never the physical report snapshot.
             ReadAxisFlickCalibration(device, cState, MappedState, eState, tp,
                 fieldMapping, outputfieldMapping);
+            BeginHoldToActivateFrame(device, cState, eState, tp, fieldMapping, MappedState,
+                outputfieldMapping, ctrl);
             if (getProfileActionCount(device) > 0 || useTempProfile[device])
                 MapCustomAction(device, cState, MappedState, eState, tp, ctrl, fieldMapping, outputfieldMapping);
             //if (ctrl.DS4Controllers[device] == null) return;
@@ -3348,6 +3350,7 @@ namespace DS4Windows
                 }
             }
 
+            ApplyHoldToActivateOutputs(device, outputfieldMapping);
             outputfieldMapping.PopulateState(MappedState);
 
             if (macroCount > 0)
@@ -4948,6 +4951,14 @@ namespace DS4Windows
 
                     if (action == null)
                     {
+                        continue;
+                    }
+
+                    if (action.typeID == SpecialAction.ActionTypeId.HoldToActivate)
+                    {
+                        if (index >= 0)
+                            ProcessHoldToActivateAction(device, action, cState, MappedState, eState, tp, ctrl,
+                                fieldMapping, outputfieldMapping);
                         continue;
                     }
 

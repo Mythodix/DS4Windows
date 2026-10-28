@@ -40,7 +40,8 @@ namespace DS4WinWPF.DS4Forms.ViewModels
             SpecialAction.ActionTypeId.Program, SpecialAction.ActionTypeId.Profile,
             SpecialAction.ActionTypeId.Key, SpecialAction.ActionTypeId.DisconnectBT,
             SpecialAction.ActionTypeId.BatteryCheck, SpecialAction.ActionTypeId.MultiAction,
-            SpecialAction.ActionTypeId.SASteeringWheelEmulationCalibrate, SpecialAction.ActionTypeId.GyroCalibrate
+            SpecialAction.ActionTypeId.SASteeringWheelEmulationCalibrate, SpecialAction.ActionTypeId.GyroCalibrate,
+            SpecialAction.ActionTypeId.HoldToActivate,
         };
 
         private List<string> controlTriggerList = new List<string>();

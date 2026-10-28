@@ -98,6 +98,12 @@ namespace DS4WinWPF.DS4Control.DTOXml
                         }
 
                         break;
+                    case SpecialAction.ActionTypeId.HoldToActivate:
+                        actionSerializer.Name = action.name;
+                        actionSerializer.Trigger = action.controls;
+                        actionSerializer.TypeString = HoldToActivateSettings.TYPE_NAME;
+                        actionSerializer.Details = action.holdSettings?.Serialize() ?? action.details;
+                        break;
                     case SpecialAction.ActionTypeId.None:
                     default:
                         actionSerializer = null;
@@ -203,6 +209,10 @@ namespace DS4WinWPF.DS4Control.DTOXml
                         double.TryParse(actionSerializer.Details, System.Globalization.NumberStyles.Float, Global.configFileDecimalCulture, out var delay);
                         tempAction = new SpecialAction(actionSerializer.Name, actionSerializer.Trigger,
                             actionSerializer.TypeString, actionSerializer.Details, delay);
+                        break;
+                    case HoldToActivateSettings.TYPE_NAME:
+                        tempAction = new SpecialAction(actionSerializer.Name, actionSerializer.Trigger,
+                            actionSerializer.TypeString, actionSerializer.Details);
                         break;
                     default:
                         break;

@@ -155,6 +155,9 @@ namespace DS4WinWPF.DS4Forms.ViewModels
                 case SpecialAction.ActionTypeId.GyroCalibrate:
                     displayName = Translations.Strings.SpecialActionEdit_CalibrateGyro;
                     break;
+                case SpecialAction.ActionTypeId.HoldToActivate:
+                    displayName = action.holdSettings?.Describe() ?? "Hold to Activate";
+                    break;
                 default: break;
             }
 

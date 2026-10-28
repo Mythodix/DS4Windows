@@ -20,7 +20,8 @@ public sealed class SpecialActionTriggerCatalogTests
     // Localization keeps process-wide weak targets. Their owning dispatcher
     // must keep pumping between editor instances, just like the actual app.
     // This background dispatcher owns no windows and ends with the testhost.
-    private static readonly Lazy<Dispatcher> EditorDispatcher = new(() =>
+    // Shared with HoldToActivateTests: one UI dispatcher per testhost.
+    internal static readonly Lazy<Dispatcher> EditorDispatcher = new(() =>
     {
         var ready = new TaskCompletionSource<Dispatcher>(TaskCreationOptions.RunContinuationsAsynchronously);
         var thread = new Thread(() =>

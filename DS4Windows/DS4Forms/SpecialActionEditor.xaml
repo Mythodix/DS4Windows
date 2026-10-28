@@ -55,6 +55,7 @@
                         <ComboBoxItem Content="{lex:Loc SpecialActionEdit.MultiAction}" />
                         <ComboBoxItem Content="{lex:Loc SpecialActionEdit.SixAxisWheelCalib}" />
                         <ComboBoxItem Content="{lex:Loc SpecialActionEdit.CalibrateGyro}" />
+                        <ComboBoxItem x:Name="holdToActivateComboItem" Content="Hold to Activate (tap / long hold)" />
                     </ComboBox>
 
                     <TabControl x:Name="actionTypeTabControl" SelectedIndex="{Binding ActionTypeIndex}" BorderBrush="{x:Null}">
@@ -214,6 +215,54 @@
                                 <Label Content="{lex:Loc HoldFor}" ContentStringFormat="{}{0} "></Label>
                                 <xctk:DecimalUpDown Value="{Binding HoldInterval}" Width="60" Minimum="0" Maximum="60" FormatString= "F2" Increment="0.5" />
                                 <Label Content="secs" />
+                            </StackPanel>
+                        </TabItem>
+                        <TabItem x:Name="holdToActivateTab" Header="Hold to Activate">
+                            <StackPanel Margin="{StaticResource spaceMargin}">
+                                <TextBlock TextWrapping="Wrap" Margin="{StaticResource spaceMargin}"
+                                           Text="Give one button two jobs. Check exactly one trigger button on the left. A quick press keeps that button's normal job; holding it for the time below does the hold action instead." />
+                                <StackPanel Orientation="Horizontal" Margin="{StaticResource spaceMargin}">
+                                    <Label Content="Hold for" />
+                                    <xctk:DecimalUpDown x:Name="holdSecondsUpDown" Value="{Binding HoldSeconds}" Width="70"
+                                                        Minimum="0.5" Maximum="10" FormatString="F1" Increment="0.5"
+                                                        AutomationProperties.Name="Hold time in seconds" />
+                                    <Label Content="seconds (0.5 to 10)" />
+                                </StackPanel>
+                                <Label Content="When the hold time is reached:" />
+                                <ComboBox x:Name="holdOutputCombo" SelectedIndex="{Binding OutputIndex}" Margin="{StaticResource spaceMargin}"
+                                          AutomationProperties.Name="Hold action">
+                                    <ComboBoxItem Content="Press a keyboard key" />
+                                    <ComboBoxItem Content="Press a controller button" />
+                                    <ComboBoxItem Content="Play a macro once" />
+                                    <ComboBoxItem Content="Switch to another profile (second layout)" />
+                                </ComboBox>
+                                <Button x:Name="holdKeySelectBtn" Content="{Binding KeyText,FallbackValue=Select a key}"
+                                        Visibility="{Binding KeyPanelVisibility}" Margin="{StaticResource spaceMargin}"
+                                        Click="HoldKeySelectBtn_Click" />
+                                <ComboBox x:Name="holdButtonCombo" ItemsSource="{Binding Buttons}" DisplayMemberPath="Label"
+                                          SelectedIndex="{Binding ButtonIndex}" Visibility="{Binding ButtonPanelVisibility}"
+                                          Margin="{StaticResource spaceMargin}" AutomationProperties.Name="Controller button to press" />
+                                <Button x:Name="holdMacroBtn" Content="{Binding MacroText,FallbackValue=Record a macro}"
+                                        Visibility="{Binding MacroPanelVisibility}" Margin="{StaticResource spaceMargin}"
+                                        Click="HoldMacroBtn_Click" />
+                                <ComboBox x:Name="holdProfileCombo" ItemsSource="{Binding ProfileList.ProfileListCol}" DisplayMemberPath="Name"
+                                          SelectedIndex="{Binding ProfileIndex}" Visibility="{Binding ProfilePanelVisibility}"
+                                          Margin="{StaticResource spaceMargin}" AutomationProperties.Name="Profile to switch to" />
+                                <StackPanel Visibility="{Binding ModePanelVisibility}" Margin="{StaticResource spaceMargin}">
+                                    <Label Content="After the hold:" />
+                                    <ComboBox x:Name="holdModeCombo" SelectedIndex="{Binding ModeIndex}" AutomationProperties.Name="Hold output mode">
+                                        <ComboBoxItem Content="Keep it pressed while I keep holding" />
+                                        <ComboBoxItem Content="Toggle it on, next long hold turns it off" />
+                                    </ComboBox>
+                                </StackPanel>
+                                <CheckBox x:Name="holdRumbleCheck" Content="Rumble the controller when the hold time is reached"
+                                          IsChecked="{Binding Rumble}" Margin="{StaticResource spaceMargin}" />
+                                <CheckBox x:Name="holdInstantTapCheck" IsChecked="{Binding InstantTap}" Margin="{StaticResource spaceMargin}">
+                                    <TextBlock TextWrapping="Wrap"
+                                               Text="Send the normal press right away (it is released when the hold time is reached). Leave off to send a quick tap when you let go." />
+                                </CheckBox>
+                                <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" FontStyle="Italic" Margin="{StaticResource spaceMargin}" />
+                                <TextBlock Text="{Binding ValidationMessage}" TextWrapping="Wrap" Foreground="#FFD03030" Margin="{StaticResource spaceMargin}" />
                             </StackPanel>
                         </TabItem>
                     </TabControl>

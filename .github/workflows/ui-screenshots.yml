@@ -1,0 +1,57 @@
+name: UI screenshots (Hold to Activate)
+
+# Manually run. Renders the real Special Action editor with the Hold to
+# Activate options (same headless WPF render the editor tests use) and also
+# tries a desktop screenshot of the published app. Uploads PNGs.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Render editor screenshots
+        env:
+          HOLD_TO_ACTIVATE_SCREENSHOT_DIR: ${{ github.workspace }}\screenshots
+        run: dotnet test .\DS4WindowsTests\DS4WindowsTests.csproj -c Release -p:Platform=x64 --filter "TestCategory=UiScreenshots" --verbosity normal
+
+      - name: Publish app
+        continue-on-error: true
+        run: dotnet publish .\DS4Windows\DS4WinWPF.csproj -c Release /p:platform=x64 -r win-x64 --self-contained true -o .\out\DS4Windows
+
+      - name: Desktop screenshot of the running app (best effort)
+        continue-on-error: true
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path screenshots | Out-Null
+          $exe = Get-ChildItem .\out\DS4Windows -Filter DS4Windows.exe -Recurse | Select-Object -First 1
+          if (-not $exe) { throw "No exe" }
+          $p = Start-Process -FilePath $exe.FullName -PassThru
+          Start-Sleep -Seconds 25
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+          $g = [System.Drawing.Graphics]::FromImage($bmp)
+          $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+          $bmp.Save("screenshots\desktop-app-launch.png", [System.Drawing.Imaging.ImageFormat]::Png)
+          $g.Dispose(); $bmp.Dispose()
+          if ($p -and -not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hold-to-activate-screenshots
+          path: screenshots
+          retention-days: 30
