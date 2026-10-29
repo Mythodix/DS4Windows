@@ -4929,6 +4929,8 @@ namespace DS4Windows
                 int actionDoneCount = actionDone.Count;
                 int totalActionCount = GetActions().Count;
                 DS4StateFieldMapping previousFieldMapping = null;
+                ProcessComboHoldModeActions(device, cState, MappedState, eState, tp, ctrl,
+                    fieldMapping, outputfieldMapping);
                 List<string> profileActions = getProfileActions(device);
                 //foreach (string actionname in profileActions)
                 for (int actionIndex = 0, profileListLen = profileActions.Count;
@@ -4954,6 +4956,12 @@ namespace DS4Windows
 
                     if (action == null)
                     {
+                        continue;
+                    }
+
+                    if (action.typeID == SpecialAction.ActionTypeId.ComboHoldMode)
+                    {
+                        // Already handled by ProcessComboHoldModeActions before this loop.
                         continue;
                     }
 

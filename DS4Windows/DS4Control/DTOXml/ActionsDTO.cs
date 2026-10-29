@@ -104,6 +104,12 @@ namespace DS4WinWPF.DS4Control.DTOXml
                         actionSerializer.TypeString = HoldToActivateSettings.TYPE_NAME;
                         actionSerializer.Details = action.holdSettings?.Serialize() ?? action.details;
                         break;
+                    case SpecialAction.ActionTypeId.ComboHoldMode:
+                        actionSerializer.Name = action.name;
+                        actionSerializer.Trigger = action.controls;
+                        actionSerializer.TypeString = ComboHoldModeSettings.TYPE_NAME;
+                        actionSerializer.Details = action.comboSettings?.Serialize() ?? action.details;
+                        break;
                     case SpecialAction.ActionTypeId.None:
                     default:
                         actionSerializer = null;
@@ -211,6 +217,10 @@ namespace DS4WinWPF.DS4Control.DTOXml
                             actionSerializer.TypeString, actionSerializer.Details, delay);
                         break;
                     case HoldToActivateSettings.TYPE_NAME:
+                        tempAction = new SpecialAction(actionSerializer.Name, actionSerializer.Trigger,
+                            actionSerializer.TypeString, actionSerializer.Details);
+                        break;
+                    case ComboHoldModeSettings.TYPE_NAME:
                         tempAction = new SpecialAction(actionSerializer.Name, actionSerializer.Trigger,
                             actionSerializer.TypeString, actionSerializer.Details);
                         break;

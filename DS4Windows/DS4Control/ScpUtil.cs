@@ -10254,6 +10254,9 @@ namespace DS4Windows
                 case 10:
                     tempAction = new SpecialAction(name, controls, HoldToActivateSettings.TYPE_NAME, details);
                     break;
+                case 11:
+                    tempAction = new SpecialAction(name, controls, ComboHoldModeSettings.TYPE_NAME, details);
+                    break;
                 default:
                     break;
             }
@@ -12087,7 +12090,7 @@ namespace DS4Windows
 
     public class SpecialAction
     {
-        public enum ActionTypeId { None, Key, Program, Profile, Macro, DisconnectBT, BatteryCheck, MultiAction, XboxGameDVR, SASteeringWheelEmulationCalibrate, GyroCalibrate, HoldToActivate }
+        public enum ActionTypeId { None, Key, Program, Profile, Macro, DisconnectBT, BatteryCheck, MultiAction, XboxGameDVR, SASteeringWheelEmulationCalibrate, GyroCalibrate, HoldToActivate, ComboHoldMode }
 
         public string name;
         public List<DS4Controls> trigger = new List<DS4Controls>();
@@ -12112,6 +12115,7 @@ namespace DS4Windows
         public string prevProfileName;  // Name of the previous profile where automaticUntrigger would jump back to (could be regular or temporary profile. Empty name is the same as regular profile)
         public bool synchronized = false; // If the same trigger has both "key down" and "key released" macros then run those synchronized if this attribute is TRUE (ie. key down macro fully completed before running the key release macro)
         public HoldToActivateSettings holdSettings; // Only set for ActionTypeId.HoldToActivate
+        public ComboHoldModeSettings comboSettings; // Only set for ActionTypeId.ComboHoldMode
         public bool keepKeyState = false; // By default special action type "Macro" resets all keys used in the macro back to default "key up" state after completing the macro even when the macro itself doesn't do it explicitly. If this is TRUE then key states are NOT reset automatically (macro is expected to do it or to leave a key to down state on purpose)
 
         public SpecialAction(string name, string controls, string type, string details, double delay = 0, string extras = "")
@@ -12260,12 +12264,19 @@ namespace DS4Windows
                 if (holdSettings.ScanCode)
                     keyType |= DS4KeyType.ScanCode;
             }
+            else if (type == ComboHoldModeSettings.TYPE_NAME)
+            {
+                typeID = ActionTypeId.ComboHoldMode;
+                comboSettings = ComboHoldModeSettings.Parse(details);
+                this.details = comboSettings.Serialize();
+            }
             else
                 this.details = details;
 
             // Hold to Activate keeps all of its options in Details; its extras
             // are never an unload-trigger chord.
-            if (type != "Key" && type != HoldToActivateSettings.TYPE_NAME && !string.IsNullOrEmpty(extras))
+            if (type != "Key" && type != HoldToActivateSettings.TYPE_NAME &&
+                type != ComboHoldModeSettings.TYPE_NAME && !string.IsNullOrEmpty(extras))
             {
                 this.ucontrols = extras;
                 string[] uctrls = extras.Split('/');

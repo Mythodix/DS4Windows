@@ -45,5 +45,5 @@ jobs:
           retention-days: 30
 
       # Runs after the upload so a test problem never blocks the download.
-      - name: Test Hold to Activate
-        run: dotnet test .\DS4WindowsTests\DS4WindowsTests.csproj -c Release -p:Platform=x64 --filter "FullyQualifiedName~HoldToActivateTests" --verbosity normal
+      - name: Test Hold to Activate and Combo Hold Mode
+        run: dotnet test .\DS4WindowsTests\DS4WindowsTests.csproj -c Release -p:Platform=x64 --filter "FullyQualifiedName~HoldToActivateTests|FullyQualifiedName~ComboHoldModeTests" --verbosity normal

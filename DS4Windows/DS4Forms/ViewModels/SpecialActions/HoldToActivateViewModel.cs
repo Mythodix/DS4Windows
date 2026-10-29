@@ -246,7 +246,7 @@ namespace DS4WinWPF.DS4Forms.ViewModels.SpecialActions
                 string secs = holdSeconds.ToString("0.#", System.Globalization.CultureInfo.CurrentCulture);
                 string tap = instantTap
                     ? "A press works normally right away and is released when the hold time is reached."
-                    : "A quick press does the button's normal job when you let go.";
+                    : "A quick press does the button's normal job when you let go. While you hold, the game will not show the button as pressed; that is expected, because the press is held back until DS4Windows knows it is a tap.";
                 string what = Kind switch
                 {
                     HoldOutputKind.Key => keyValue > 0 ? $"presses {KeyText}" : "presses the key you pick",

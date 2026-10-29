@@ -125,6 +125,7 @@ namespace DS4Windows
             DS4StateFieldMapping outputfieldMapping, ControlService ctrl)
         {
             holdForcedOutputs[device].Clear();
+            UpdateComboRumble(device, ctrl);
 
             long rumbleOff = holdRumbleOffAtMs[device];
             if (rumbleOff != 0 && HoldNowMs() >= rumbleOff)
@@ -336,6 +337,7 @@ namespace DS4Windows
         internal static void StopAllHoldMacros(int device)
         {
             if (device < 0 || device >= holdMacros.Length) return;
+            ResetComboHoldModes(device);
             Dictionary<SpecialAction, HoldMacroEntry> macros = holdMacros[device];
             List<HoldMacroEntry> entries;
             lock (macros)
@@ -359,6 +361,7 @@ namespace DS4Windows
         private static void ApplyHoldToActivateOutputs(int device, DS4StateFieldMapping outputfieldMapping)
         {
             StopStaleHoldMacros(device);
+            StopStaleComboModes(device);
             List<DS4Controls> outputs = holdForcedOutputs[device];
             for (int i = 0, len = outputs.Count; i < len; i++)
             {

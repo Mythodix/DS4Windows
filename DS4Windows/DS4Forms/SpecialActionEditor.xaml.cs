@@ -46,6 +46,7 @@ namespace DS4WinWPF.DS4Forms
         private SpecialActionViewModel saSteeringWheelVM;
         private SpecialActionViewModel calibrateGyroVM;
         private HoldToActivateViewModel holdToActivateVM;
+        private ComboHoldModeViewModel comboHoldModeVM;
 
         public event EventHandler Cancel;
         public delegate void SaveHandler(object sender, string actionName);
@@ -70,6 +71,7 @@ namespace DS4WinWPF.DS4Forms
             saSteeringWheelVM = new SpecialActionViewModel(8);
             calibrateGyroVM = new SpecialActionViewModel(9);
             holdToActivateVM = new HoldToActivateViewModel(profileList);
+            comboHoldModeVM = new ComboHoldModeViewModel();
 
             // Hide tab headers. Tab content will still be visible
             blankActTab.Visibility = Visibility.Collapsed;
@@ -83,6 +85,7 @@ namespace DS4WinWPF.DS4Forms
             sixaxisWheelCalibrateTab.Visibility = Visibility.Collapsed;
             gyroCalibrateTab.Visibility = Visibility.Collapsed;
             holdToActivateTab.Visibility = Visibility.Collapsed;
+            comboHoldModeTab.Visibility = Visibility.Collapsed;
 
             if (specialAction != null)
             {
@@ -104,6 +107,7 @@ namespace DS4WinWPF.DS4Forms
             sixaxisWheelCalibrateTab.DataContext = saSteeringWheelVM;
             gyroCalibrateTab.DataContext = calibrateGyroVM;
             holdToActivateTab.DataContext = holdToActivateVM;
+            comboHoldModeTab.DataContext = comboHoldModeVM;
 
             SetupLateEvents();
         }
@@ -222,6 +226,7 @@ namespace DS4WinWPF.DS4Forms
             sixaxisWheelCalibrateTab.DataContext = null;
             gyroCalibrateTab.DataContext = null;
             holdToActivateTab.DataContext = null;
+            comboHoldModeTab.DataContext = null;
         }
 
         private void LoadAction(DS4Windows.SpecialAction specialAction)
@@ -264,6 +269,9 @@ namespace DS4WinWPF.DS4Forms
                 case DS4Windows.SpecialAction.ActionTypeId.HoldToActivate:
                     holdToActivateVM.LoadAction(specialAction);
                     break;
+                case DS4Windows.SpecialAction.ActionTypeId.ComboHoldMode:
+                    comboHoldModeVM.LoadAction(specialAction);
+                    break;
             }
         }
 
@@ -302,6 +310,11 @@ namespace DS4WinWPF.DS4Forms
                 {
                     // Leave the editor open so the user can fix the setting.
                     MessageBox.Show(holdToActivateVM.ValidationMessage, "Hold to Activate");
+                    return;
+                }
+                if (!valid && typeId == DS4Windows.SpecialAction.ActionTypeId.ComboHoldMode)
+                {
+                    MessageBox.Show(comboHoldModeVM.ValidationMessage, "Combo Hold Mode");
                     return;
                 }
             }
@@ -352,6 +365,9 @@ namespace DS4WinWPF.DS4Forms
                     case DS4Windows.SpecialAction.ActionTypeId.HoldToActivate:
                         holdToActivateVM.SaveAction(tempAct, editMode);
                         break;
+                    case DS4Windows.SpecialAction.ActionTypeId.ComboHoldMode:
+                        comboHoldModeVM.SaveAction(tempAct, editMode);
+                        break;
                 }
 
                 Saved?.Invoke(this, tempAct.name);
@@ -393,6 +409,9 @@ namespace DS4WinWPF.DS4Forms
                     break;
                 case DS4Windows.SpecialAction.ActionTypeId.HoldToActivate:
                     valid = holdToActivateVM.IsValid(action);
+                    break;
+                case DS4Windows.SpecialAction.ActionTypeId.ComboHoldMode:
+                    valid = comboHoldModeVM.IsValid(action);
                     break;
             }
 
@@ -568,6 +587,7 @@ namespace DS4WinWPF.DS4Forms
         }
 
         internal HoldToActivateViewModel HoldToActivateViewModel => holdToActivateVM;
+        internal ComboHoldModeViewModel ComboHoldModeViewModel => comboHoldModeVM;
 
         private void HoldKeySelectBtn_Click(object sender, RoutedEventArgs e)
         {

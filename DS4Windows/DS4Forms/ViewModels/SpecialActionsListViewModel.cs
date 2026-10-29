@@ -158,6 +158,9 @@ namespace DS4WinWPF.DS4Forms.ViewModels
                 case SpecialAction.ActionTypeId.HoldToActivate:
                     displayName = action.holdSettings?.Describe() ?? "Hold to Activate";
                     break;
+                case SpecialAction.ActionTypeId.ComboHoldMode:
+                    displayName = action.comboSettings?.Describe() ?? "Combo Hold Mode";
+                    break;
                 default: break;
             }
 

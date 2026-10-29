@@ -56,6 +56,7 @@
                         <ComboBoxItem Content="{lex:Loc SpecialActionEdit.SixAxisWheelCalib}" />
                         <ComboBoxItem Content="{lex:Loc SpecialActionEdit.CalibrateGyro}" />
                         <ComboBoxItem x:Name="holdToActivateComboItem" Content="Hold to Activate (tap / long hold)" />
+                        <ComboBoxItem x:Name="comboHoldModeComboItem" Content="Combo Hold Mode (mode button + hold for many buttons)" />
                     </ComboBox>
 
                     <TabControl x:Name="actionTypeTabControl" SelectedIndex="{Binding ActionTypeIndex}" BorderBrush="{x:Null}">
@@ -267,8 +268,67 @@
                                           IsChecked="{Binding Rumble}" Margin="{StaticResource spaceMargin}" />
                                 <CheckBox x:Name="holdInstantTapCheck" IsChecked="{Binding InstantTap}" Margin="{StaticResource spaceMargin}">
                                     <TextBlock TextWrapping="Wrap"
-                                               Text="Send the normal press right away (it is released when the hold time is reached). Leave off to send a quick tap when you let go." />
+                                               Text="Send the normal press right away (it is released when the hold time is reached). Leave off to send a quick tap when you let go. While it is off, the game does not see the button as pressed during the hold: DS4Windows holds the press back until it knows whether you are tapping or holding. That is expected." />
                                 </CheckBox>
+                                <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" FontStyle="Italic" Margin="{StaticResource spaceMargin}" />
+                                <TextBlock Text="{Binding ValidationMessage}" TextWrapping="Wrap" Foreground="#FFD03030" Margin="{StaticResource spaceMargin}" />
+                            </StackPanel>
+                        </TabItem>
+                        <TabItem x:Name="comboHoldModeTab" Header="Combo Hold Mode">
+                            <StackPanel Margin="{StaticResource spaceMargin}">
+                                <TextBlock TextWrapping="Wrap" Margin="{StaticResource spaceMargin}"
+                                           Text="Check exactly one mode button on the left, for example a DualSense Edge back paddle (GL / Left back paddle or GR / Right back paddle). The mode button turns combo mode on and off and does nothing else. While combo mode is on, holding the hold button presses all the buttons ticked below together." />
+                                <Label Content="Mode button:" />
+                                <ComboBox x:Name="comboModeBehaviorCombo" SelectedIndex="{Binding ModeIndex}" Margin="{StaticResource spaceMargin}"
+                                          AutomationProperties.Name="Mode button behavior">
+                                    <ComboBoxItem Content="Toggle on/off with each press" />
+                                    <ComboBoxItem Content="Only while mode button is held" />
+                                </ComboBox>
+                                <StackPanel Orientation="Horizontal" Margin="{StaticResource spaceMargin}">
+                                    <Label Content="Hold button:" />
+                                    <ComboBox x:Name="comboHoldButtonCombo" ItemsSource="{Binding HoldButtons}" DisplayMemberPath="Label"
+                                              SelectedIndex="{Binding HoldIndex}" MinWidth="180" AutomationProperties.Name="Hold button" />
+                                </StackPanel>
+                                <Label Content="While combo mode is on and the hold button is held, press:" />
+                                <ItemsControl x:Name="comboOutputsList" ItemsSource="{Binding Outputs}" Margin="{StaticResource spaceMargin}"
+                                              AutomationProperties.Name="Buttons to press">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="3" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked}" Margin="0,2,8,2" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <StackPanel Orientation="Horizontal" Margin="{StaticResource spaceMargin}">
+                                    <Label Content="Output style:" />
+                                    <ComboBox x:Name="comboStyleCombo" SelectedIndex="{Binding StyleIndex}" MinWidth="220"
+                                              AutomationProperties.Name="Output style">
+                                        <ComboBoxItem Content="Rapid repeat (press and release)" />
+                                        <ComboBoxItem Content="Hold steady" />
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel x:Name="comboPulsePanel" Orientation="Horizontal" Visibility="{Binding PulsePanelVisibility}"
+                                            Margin="{StaticResource spaceMargin}">
+                                    <Label Content="Press time" />
+                                    <xctk:IntegerUpDown x:Name="comboPressMsUpDown" Value="{Binding PressMs}" Width="70" Minimum="30" Maximum="500"
+                                                        Increment="10" AutomationProperties.Name="Press time in milliseconds" />
+                                    <Label Content="ms   Release time" />
+                                    <xctk:IntegerUpDown x:Name="comboReleaseMsUpDown" Value="{Binding ReleaseMs}" Width="70" Minimum="30" Maximum="500"
+                                                        Increment="10" AutomationProperties.Name="Release time in milliseconds" />
+                                    <Label Content="ms (30 to 500)" />
+                                </StackPanel>
+                                <CheckBox x:Name="comboPassHoldCheck" IsChecked="{Binding PassHold}" Margin="{StaticResource spaceMargin}">
+                                    <TextBlock TextWrapping="Wrap" Text="Also send the hold button itself while combo mode is on" />
+                                </CheckBox>
+                                <CheckBox x:Name="comboRumbleCheck" IsChecked="{Binding Rumble}" Margin="{StaticResource spaceMargin}">
+                                    <TextBlock TextWrapping="Wrap" Text="Rumble when combo mode turns on (one buzz) and off (two buzzes)" />
+                                </CheckBox>
+                                <CheckBox x:Name="comboLightbarCheck" Content="Turn the light bar red while combo mode is on"
+                                          IsChecked="{Binding Lightbar}" Margin="{StaticResource spaceMargin}" />
                                 <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" FontStyle="Italic" Margin="{StaticResource spaceMargin}" />
                                 <TextBlock Text="{Binding ValidationMessage}" TextWrapping="Wrap" Foreground="#FFD03030" Margin="{StaticResource spaceMargin}" />
                             </StackPanel>
