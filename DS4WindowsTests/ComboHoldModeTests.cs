@@ -258,7 +258,7 @@ public sealed class ComboHoldModeTests
     public void EditorViewModelDefaultsToRequestedComboAndValidates()
     {
         var vm = new ComboHoldModeViewModel();
-        Assert.AreEqual(UserCombo, vm.BuildSettings().Serialize());
+        AssertSameCombo(UserCombo, vm.BuildSettings());
         Assert.AreEqual(Visibility.Visible, vm.PulsePanelVisibility);
         Assert.IsNull(vm.Validate(new SpecialAction("x", "Bottom Left Paddle", "null", "null")));
         Assert.IsNull(vm.Validate(new SpecialAction("x", "Bottom Right Paddle", "null", "null")));
@@ -277,7 +277,18 @@ public sealed class ComboHoldModeTests
         Assert.IsNotNull(vm.Validate(new SpecialAction("x", "Bottom Left Paddle", "null", "null")), "needs an output");
 
         vm.LoadSettings(Settings());
-        Assert.AreEqual(UserCombo, vm.BuildSettings().Serialize());
+        AssertSameCombo(UserCombo, vm.BuildSettings());
+    }
+
+    // The editor lists outputs in its own display order; order never matters at runtime.
+    private static void AssertSameCombo(string expected, ComboHoldModeSettings actual)
+    {
+        var e = Settings(expected);
+        CollectionAssert.AreEquivalent(e.Outputs, actual.Outputs);
+        e.Outputs.Clear();
+        var a = ComboHoldModeSettings.Parse(actual.Serialize());
+        a.Outputs.Clear();
+        Assert.AreEqual(e.Serialize(), a.Serialize());
     }
 
     [TestMethod]
